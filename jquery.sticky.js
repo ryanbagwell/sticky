@@ -152,8 +152,8 @@
     },
     methods = {
       init: function(options) {
+        var o = $.extend({}, defaults, options);
         return this.each(function() {
-          var o = $.extend({}, defaults, options);
           var stickyElement = $(this);
 
           var stickyId = stickyElement.attr('id');
@@ -162,11 +162,7 @@
             .attr('id', wrapperId)
             .addClass(o.wrapperClassName);
 
-          stickyElement.wrapAll(function() {
-            if ($(this).parent("#" + wrapperId).length == 0) {
-                    return wrapper;
-            }
-});
+          stickyElement.wrapAll(wrapper);
 
           var stickyWrapper = stickyElement.parent();
 
@@ -196,31 +192,42 @@
           stickyWrapper.css('height', element.outerHeight());
         }
       },
+      removeChangeListeners(stickyElement) {
 
-      setupChangeListeners: function(stickyElement) {
         if (window.MutationObserver) {
-          var mutationObserver = new window.MutationObserver(function(mutations) {
+          var mutationObserver = $.data(stickyElement, 'observable');
+          mutationObserver.disconnect();
+        } else {
+          $(stickyElement).off('DOMNodeInserted');
+          $(stickyElement).off('DOMNodeRemoved');
+        }
+
+      },
+      setupChangeListeners: function(stickyElement) {
+
+        if (window.MutationObserver) {
+
+          var mutationObserver = $.data(stickyElement, 'observable') || new window.MutationObserver(function(mutations) {
             if (mutations[0].addedNodes.length || mutations[0].removedNodes.length) {
-              methods.setWrapperHeight(stickyElement);
+                methods.setWrapperHeight(stickyElement);
             }
           });
+
+          $.data(stickyElement, 'observable', mutationObserver);
+
           mutationObserver.observe(stickyElement, {subtree: true, childList: true});
+
         } else {
-          if (window.addEventListener) {
-            stickyElement.addEventListener('DOMNodeInserted', function() {
-              methods.setWrapperHeight(stickyElement);
-            }, false);
-            stickyElement.addEventListener('DOMNodeRemoved', function() {
-              methods.setWrapperHeight(stickyElement);
-            }, false);
-          } else if (window.attachEvent) {
-            stickyElement.attachEvent('onDOMNodeInserted', function() {
-              methods.setWrapperHeight(stickyElement);
-            });
-            stickyElement.attachEvent('onDOMNodeRemoved', function() {
-              methods.setWrapperHeight(stickyElement);
-            });
-          }
+
+          $.data(stickyElement, 'DOMNodeInserted',
+            methods.setWrapperHeight.bind(this, stickyElement));
+          $.data(stickyElement, 'DOMNodeRemoved',
+            methods.setWrapperHeight.bind(this, stickyElement));
+
+          $(stickyElement).on('DOMNodeInserted',
+            $.data(stickyElement, 'DOMNodeInserted'), false);
+          $(stickyElement).on('DOMNodeRemoved',
+            $.data(stickyElement, 'DOMNodeRemoved'), false);
         }
       },
       update: scroller,
@@ -228,8 +235,7 @@
         return this.each(function() {
           var that = this;
           var unstickyElement = $(that);
-
-          var removeIdx = -1;
+            var removeIdx = -1;
           var i = sticked.length;
           while (i-- > 0) {
             if (sticked[i].stickyElement.get(0) === that) {
@@ -249,6 +255,9 @@
               })
             ;
           }
+
+          methods.removeChangeListeners(this);
+
         });
       }
     };
