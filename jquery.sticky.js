@@ -192,7 +192,7 @@
           stickyWrapper.css('height', element.outerHeight());
         }
       },
-      removeChangeListeners(stickyElement) {
+      removeChangeListeners: function(stickyElement) {
 
         if (window.MutationObserver) {
           var mutationObserver = $.data(stickyElement, 'observable');
