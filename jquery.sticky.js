@@ -196,7 +196,9 @@
 
         if (window.MutationObserver) {
           var mutationObserver = $.data(stickyElement, 'observable');
-          mutationObserver.disconnect();
+          try {
+            mutationObserver.disconnect();
+          } catch(e) {};
         } else {
           $(stickyElement).off('DOMNodeInserted');
           $(stickyElement).off('DOMNodeRemoved');
